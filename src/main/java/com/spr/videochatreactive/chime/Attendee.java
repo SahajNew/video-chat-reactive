@@ -1,9 +1,7 @@
-package com.spr.videochat.beans.chime;
+package com.spr.videochatreactive.chime;
 
-import io.leangen.graphql.annotations.types.GraphQLType;
 import java.io.Serializable;
 
-@GraphQLType(name = "ChimeAttendee")
 public class Attendee implements Serializable, Cloneable {
 
     /**
@@ -32,9 +30,8 @@ public class Attendee implements Serializable, Cloneable {
      * builder application.
      * </p>
      *
-     * @param externalUserId
-     *        The Amazon Chime SDK external user ID. An idempotency token. Links the attendee to an identity managed by
-     *        a builder application.
+     * @param externalUserId The Amazon Chime SDK external user ID. An idempotency token. Links the attendee to an identity managed by
+     *                       a builder application.
      */
 
     public void setExternalUserId(String externalUserId) {
@@ -48,7 +45,7 @@ public class Attendee implements Serializable, Cloneable {
      * </p>
      *
      * @return The Amazon Chime SDK external user ID. An idempotency token. Links the attendee to an identity managed by
-     *         a builder application.
+     * a builder application.
      */
 
     public String getExternalUserId() {
@@ -61,9 +58,8 @@ public class Attendee implements Serializable, Cloneable {
      * builder application.
      * </p>
      *
-     * @param externalUserId
-     *        The Amazon Chime SDK external user ID. An idempotency token. Links the attendee to an identity managed by
-     *        a builder application.
+     * @param externalUserId The Amazon Chime SDK external user ID. An idempotency token. Links the attendee to an identity managed by
+     *                       a builder application.
      * @return Returns a reference to this object so that method calls can be chained together.
      */
 
@@ -77,8 +73,7 @@ public class Attendee implements Serializable, Cloneable {
      * The Amazon Chime SDK attendee ID.
      * </p>
      *
-     * @param attendeeId
-     *        The Amazon Chime SDK attendee ID.
+     * @param attendeeId The Amazon Chime SDK attendee ID.
      */
 
     public void setAttendeeId(String attendeeId) {
@@ -102,8 +97,7 @@ public class Attendee implements Serializable, Cloneable {
      * The Amazon Chime SDK attendee ID.
      * </p>
      *
-     * @param attendeeId
-     *        The Amazon Chime SDK attendee ID.
+     * @param attendeeId The Amazon Chime SDK attendee ID.
      * @return Returns a reference to this object so that method calls can be chained together.
      */
 
@@ -117,8 +111,7 @@ public class Attendee implements Serializable, Cloneable {
      * The join token used by the Amazon Chime SDK attendee.
      * </p>
      *
-     * @param joinToken
-     *        The join token used by the Amazon Chime SDK attendee.
+     * @param joinToken The join token used by the Amazon Chime SDK attendee.
      */
 
     public void setJoinToken(String joinToken) {
@@ -142,8 +135,7 @@ public class Attendee implements Serializable, Cloneable {
      * The join token used by the Amazon Chime SDK attendee.
      * </p>
      *
-     * @param joinToken
-     *        The join token used by the Amazon Chime SDK attendee.
+     * @param joinToken The join token used by the Amazon Chime SDK attendee.
      * @return Returns a reference to this object so that method calls can be chained together.
      */
 
@@ -157,8 +149,7 @@ public class Attendee implements Serializable, Cloneable {
      * redacted from this string using a placeholder value.
      *
      * @return A string representation of this object.
-     *
-     * @see java.lang.Object#toString()
+     * @see Object#toString()
      */
     @Override
     public String toString() {

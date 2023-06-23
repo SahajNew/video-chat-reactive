@@ -1,4 +1,4 @@
-package com.spr.videochatreactive;
+package com.spr.videochatreactive.beans;
 
 public class VideoChatRecordingState {
 

@@ -1,10 +1,4 @@
-package com.spr.videochat.beans.chime;
-
-/**
- * User : dhruvthakker
- * Date : 2021-03-13
- * Time : 20:23
- */
+package com.spr.videochatreactive.chime;
 
 import java.io.Serializable;
 
@@ -324,7 +318,7 @@ public class MediaPlacement implements Serializable, Cloneable {
      * redacted from this string using a placeholder value.
      *
      * @return A string representation of this object.
-     * @see java.lang.Object#toString()
+     * @see Object#toString()
      */
     @Override
     public String toString() {

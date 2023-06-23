@@ -1,7 +1,8 @@
-package com.spr.videochatreactive;
+package com.spr.videochatreactive.beans;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.spr.videochatreactive.chime.ChimeVideoChatConversationProviderDetails;
 
 import static com.spr.videochatreactive.VideoChatConstants.AMAZON_CHIME;
 

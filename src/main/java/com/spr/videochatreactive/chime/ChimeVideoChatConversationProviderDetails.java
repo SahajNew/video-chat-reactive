@@ -1,6 +1,6 @@
-package com.spr.videochatreactive;
+package com.spr.videochatreactive.chime;
 
-import com.spr.videochatreactive.chime.Meeting;
+import com.spr.videochatreactive.beans.VideoChatConversationProviderDetails;
 
 public class ChimeVideoChatConversationProviderDetails extends VideoChatConversationProviderDetails {
 

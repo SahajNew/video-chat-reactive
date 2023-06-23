@@ -1,15 +1,7 @@
-package com.spr.videochat.beans.chime;
+package com.spr.videochatreactive.chime;
 
-/**
- * User : dhruvthakker
- * Date : 2021-03-13
- * Time : 20:09
- */
-
-import io.leangen.graphql.annotations.types.GraphQLType;
 import java.io.Serializable;
 
-@GraphQLType(name = "ChimeMeeting")
 public class Meeting implements Serializable, Cloneable {
 
     /**
@@ -189,11 +181,11 @@ public class Meeting implements Serializable, Cloneable {
      * </p>
      *
      * @param mediaRegion The Region in which you create the meeting. Available values: <code>af-south-1</code> ,
-     * <code>ap-northeast-1</code> , <code>ap-northeast-2</code> , <code>ap-south-1</code> ,
-     * <code>ap-southeast-1</code> , <code>ap-southeast-2</code> , <code>ca-central-1</code> ,
-     * <code>eu-central-1</code> , <code>eu-north-1</code> , <code>eu-south-1</code> , <code>eu-west-1</code> ,
-     * <code>eu-west-2</code> , <code>eu-west-3</code> , <code>sa-east-1</code> , <code>us-east-1</code> ,
-     * <code>us-east-2</code> , <code>us-west-1</code> , <code>us-west-2</code> .
+     *                    <code>ap-northeast-1</code> , <code>ap-northeast-2</code> , <code>ap-south-1</code> ,
+     *                    <code>ap-southeast-1</code> , <code>ap-southeast-2</code> , <code>ca-central-1</code> ,
+     *                    <code>eu-central-1</code> , <code>eu-north-1</code> , <code>eu-south-1</code> , <code>eu-west-1</code> ,
+     *                    <code>eu-west-2</code> , <code>eu-west-3</code> , <code>sa-east-1</code> , <code>us-east-1</code> ,
+     *                    <code>us-east-2</code> , <code>us-west-1</code> , <code>us-west-2</code> .
      */
 
     public void setMediaRegion(String mediaRegion) {
@@ -211,11 +203,11 @@ public class Meeting implements Serializable, Cloneable {
      * </p>
      *
      * @param mediaRegion The Region in which you create the meeting. Available values: <code>af-south-1</code> ,
-     * <code>ap-northeast-1</code> , <code>ap-northeast-2</code> , <code>ap-south-1</code> ,
-     * <code>ap-southeast-1</code> , <code>ap-southeast-2</code> , <code>ca-central-1</code> ,
-     * <code>eu-central-1</code> , <code>eu-north-1</code> , <code>eu-south-1</code> , <code>eu-west-1</code> ,
-     * <code>eu-west-2</code> , <code>eu-west-3</code> , <code>sa-east-1</code> , <code>us-east-1</code> ,
-     * <code>us-east-2</code> , <code>us-west-1</code> , <code>us-west-2</code> .
+     *                    <code>ap-northeast-1</code> , <code>ap-northeast-2</code> , <code>ap-south-1</code> ,
+     *                    <code>ap-southeast-1</code> , <code>ap-southeast-2</code> , <code>ca-central-1</code> ,
+     *                    <code>eu-central-1</code> , <code>eu-north-1</code> , <code>eu-south-1</code> , <code>eu-west-1</code> ,
+     *                    <code>eu-west-2</code> , <code>eu-west-3</code> , <code>sa-east-1</code> , <code>us-east-1</code> ,
+     *                    <code>us-east-2</code> , <code>us-west-1</code> , <code>us-west-2</code> .
      * @return Returns a reference to this object so that method calls can be chained together.
      */
 
@@ -229,7 +221,7 @@ public class Meeting implements Serializable, Cloneable {
      * redacted from this string using a placeholder value.
      *
      * @return A string representation of this object.
-     * @see java.lang.Object#toString()
+     * @see Object#toString()
      */
     @Override
     public String toString() {

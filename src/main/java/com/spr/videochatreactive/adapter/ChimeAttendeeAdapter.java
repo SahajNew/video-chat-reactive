@@ -1,13 +1,7 @@
-package com.spr.videochat.adapter;
+package com.spr.videochatreactive.adapter;
 
+import com.spr.videochatreactive.chime.Attendee;
 
-import com.spr.videochat.beans.chime.Attendee;
-
-/**
- * User : dhruvthakker
- * Date : 2021-03-13
- * Time : 20:16
- */
 public class ChimeAttendeeAdapter {
 
     public static final ChimeAttendeeAdapter INSTANCE = new ChimeAttendeeAdapter();

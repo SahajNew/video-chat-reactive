@@ -1,13 +1,8 @@
-package com.spr.videochat.adapter;
+package com.spr.videochatreactive.adapter;
 
-import com.spr.videochat.beans.chime.MediaPlacement;
-import com.spr.videochat.beans.chime.Meeting;
+import com.spr.videochatreactive.chime.MediaPlacement;
+import com.spr.videochatreactive.chime.Meeting;
 
-/**
- * User : dhruvthakker
- * Date : 2021-03-13
- * Time : 20:15
- */
 public class ChimeMeetingAdapter {
 
     private static final ChimeMeetingAdapter INSTANCE = new ChimeMeetingAdapter();

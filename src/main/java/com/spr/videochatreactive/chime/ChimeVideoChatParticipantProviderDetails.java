@@ -1,6 +1,6 @@
-package com.spr.videochatreactive;
+package com.spr.videochatreactive.chime;
 
-import com.spr.videochatreactive.chime.Attendee;
+import com.spr.videochatreactive.beans.VideoChatParticipantProviderDetails;
 
 public class ChimeVideoChatParticipantProviderDetails extends VideoChatParticipantProviderDetails {
 
