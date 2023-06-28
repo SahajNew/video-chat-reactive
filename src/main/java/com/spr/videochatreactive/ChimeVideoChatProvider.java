@@ -16,6 +16,7 @@ import com.spr.videochatreactive.chime.Meeting;
 import com.spr.videochatreactive.chime.Attendee;
 import com.spr.videochatreactive.adapter.ChimeMeetingAdapter;
 import org.apache.commons.collections4.MapUtils;
+import reactor.core.publisher.Mono;
 
 import java.util.Locale;
 import java.util.Map;
@@ -28,19 +29,25 @@ public class ChimeVideoChatProvider implements VideoChatProvider {
 
 
     @Override
-    public VideoChatConversationProviderDetails createVideoChatConversation(com.spr.videochatreactive.beans.Account account) {
-        AmazonChime chimeClient = getChimeApiClient(account);
-        Tag partnerTag = new Tag().withKey("PARTNER_TAG").withValue(String.valueOf(getCurrentPartnerId()));
-        CreateMeetingRequest createMeetingRequest = new CreateMeetingRequest().withExternalMeetingId(UUID.randomUUID().toString()).withTags(partnerTag);
-        Map<String, String> propertiesMap = account.getPropertiesMap();
-        if (propertiesMap != null && propertiesMap.containsKey(AWS_REGION)) {
-            createMeetingRequest.setMediaRegion(propertiesMap.get(AWS_REGION));
-        }
+    public Mono<VideoChatConversationProviderDetails> createVideoChatConversation(Account account) {
 
-        CreateMeetingResult meetingResult = chimeClient.createMeeting(createMeetingRequest);
+        return Mono.fromCallable(()->getChimeApiClient(account))
+                .flatMap(chimeClient->{
 
-        Meeting meeting = ChimeMeetingAdapter.getInstance().createSprMeeting(meetingResult.getMeeting());
-        return new ChimeVideoChatConversationProviderDetails(meetingResult.getMeeting().getMeetingId(), meeting);
+                    Tag partnerTag = new Tag().withKey("PARTNER_TAG").withValue(String.valueOf(getCurrentPartnerId()));
+                    CreateMeetingRequest createMeetingRequest = new CreateMeetingRequest().withExternalMeetingId(UUID.randomUUID().toString()).withTags(partnerTag);
+                    Map<String, String> propertiesMap = account.getPropertiesMap();
+                    if (propertiesMap != null && propertiesMap.containsKey(AWS_REGION)) {
+                        createMeetingRequest.setMediaRegion(propertiesMap.get(AWS_REGION));
+                    }
+
+//                    Mono<CreateMeetingResult> meetingResult=
+                    return Mono.fromCallable(()->chimeClient.createMeeting(createMeetingRequest))
+                            .map(meetingResult->{
+                                Meeting meeting=ChimeMeetingAdapter.getInstance().createSprMeeting(meetingResult.getMeeting());
+                                return new  ChimeVideoChatConversationProviderDetails(meetingResult.getMeeting().getMeetingId(), meeting);
+                            });
+                });
     }
 
     @Override
@@ -49,130 +56,196 @@ public class ChimeVideoChatProvider implements VideoChatProvider {
     }
 
     @Override
-    public VideoChatParticipantProviderDetails addVideoChatParticipant(com.spr.videochatreactive.beans.Account account,
-                                                                       VideoChatConversationProviderDetails conversationProviderDetails,
-                                                                       String participantId) {
-        try {
-            if (!(conversationProviderDetails instanceof ChimeVideoChatConversationProviderDetails)) {
-                throw new RuntimeException("Invalid conversation provider details");
-            }
-            String meetingId = ((ChimeVideoChatConversationProviderDetails) conversationProviderDetails).getMeetingId();
-            AmazonChime chimeClient = getChimeApiClient(account);
+    public Mono<VideoChatParticipantProviderDetails> addVideoChatParticipant(com.spr.videochatreactive.beans.Account account,
+                                                                             VideoChatConversationProviderDetails conversationProviderDetails,
+                                                                             String participantId) {
 
-            CreateAttendeeResult attendeeResult = chimeClient.createAttendee(new CreateAttendeeRequest().withMeetingId(meetingId)
-                    .withExternalUserId(participantId));
+        return Mono.just(conversationProviderDetails)
+                .filter(details -> details instanceof ChimeVideoChatConversationProviderDetails)
+                .switchIfEmpty(Mono.error(new RuntimeException("Invalid conversation provider details")))
+                .flatMap(details->Mono.fromCallable(()-> getChimeApiClient(account)))
+                .flatMap(chimeClient->{
 
-            Attendee attendee = ChimeAttendeeAdapter.getInstance().createSprAttendee(attendeeResult.getAttendee());
-            return new ChimeVideoChatParticipantProviderDetails(meetingId, attendeeResult.getAttendee().getAttendeeId(), attendee);
-        } catch (NotFoundException e) {
-            throw new RuntimeException("Meeting Already Ended");
-        }
+                    String meetingId = ((ChimeVideoChatConversationProviderDetails) conversationProviderDetails).getMeetingId();
+                    return Mono.fromCallable(()->chimeClient.createAttendee(new CreateAttendeeRequest().withMeetingId(meetingId).withExternalUserId(participantId)))
+//                             .map(attendeeResult-> Tuples.of(meetingId,attendeeResult))
+                            .map(attendeeResult->{
+                                Attendee attendee = ChimeAttendeeAdapter.getInstance().createSprAttendee(attendeeResult.getAttendee());
+                                VideoChatParticipantProviderDetails participantDetails = new ChimeVideoChatParticipantProviderDetails(meetingId, attendeeResult.getAttendee().getAttendeeId(), attendee);
+                                return (participantDetails);
+                            });
+
+                })
+                .onErrorResume(throwable -> {
+                    if (throwable instanceof NotFoundException) {
+                        return Mono.error(new RuntimeException("Meeting already ended"));
+                    } else {
+                        return Mono.error(throwable);
+                    }
+                });
+
+
     }
 
     @Override
-    public VideoChatParticipantProviderDetails rejoinVideoChatParticipant(com.spr.videochatreactive.beans.Account account,
-                                                                          VideoChatConversationProviderDetails conversationProviderDetails,
-                                                                          String participantId) {
-        try {
-            if (!(conversationProviderDetails instanceof ChimeVideoChatConversationProviderDetails)) {
-                throw new RuntimeException("Invalid conversation provider details");
-            }
-            String meetingId = ((ChimeVideoChatConversationProviderDetails) conversationProviderDetails).getMeetingId();
-            AmazonChime chimeClient = getChimeApiClient(account);
+    public Mono<VideoChatParticipantProviderDetails> rejoinVideoChatParticipant(Account account,
+                                                                                VideoChatConversationProviderDetails conversationProviderDetails,
+                                                                                String participantId) {
 
-            CreateAttendeeResult attendeeResult = chimeClient.createAttendee(new CreateAttendeeRequest().withMeetingId(meetingId)
-                    .withExternalUserId(participantId));
+        return Mono.just(conversationProviderDetails)
+                .filter(details->details instanceof ChimeVideoChatConversationProviderDetails)
+                .switchIfEmpty(Mono.error(new RuntimeException("Invalid conversation provider details")))
+                .flatMap(details->Mono.fromCallable(()->getChimeApiClient(account)))
+                .flatMap(chimeClient->{
 
-            Attendee attendee = ChimeAttendeeAdapter.getInstance().createSprAttendee(attendeeResult.getAttendee());
-            return new ChimeVideoChatParticipantProviderDetails(meetingId, attendeeResult.getAttendee().getAttendeeId(), attendee);
-        } catch (NotFoundException e) {
-            throw new RuntimeException("Meeting Already Ended");
-        }
+                    String meetingId=((ChimeVideoChatConversationProviderDetails) conversationProviderDetails).getMeetingId();
+
+                    return Mono.fromCallable(()-> chimeClient.createAttendee(new CreateAttendeeRequest().withMeetingId(meetingId).withExternalUserId(participantId)))
+
+                            .map(attendeeResult ->{
+                                Attendee attendee = ChimeAttendeeAdapter.getInstance().createSprAttendee(attendeeResult.getAttendee());
+                                VideoChatParticipantProviderDetails videoChatParticipantProviderDetails= new ChimeVideoChatParticipantProviderDetails(meetingId, attendeeResult.getAttendee().getAttendeeId(), attendee);
+                                return  videoChatParticipantProviderDetails;
+                            } );
+
+                })
+
+                .onErrorResume(throwable -> {
+
+                    if (throwable instanceof NotFoundException) {return Mono.error(new RuntimeException("Meeting already ended"));}
+                    else {return Mono.error(throwable);}
+                });
     }
 
     @Override
-    public boolean removeParticipantFromConversation(com.spr.videochatreactive.beans.Account account, VideoChatParticipantProviderDetails participantProviderDetails) {
-        try {
-            if (!(participantProviderDetails instanceof ChimeVideoChatParticipantProviderDetails)) {
-                throw new RuntimeException("Invalid conversation provider details");
-            }
-            String meetingId = ((ChimeVideoChatParticipantProviderDetails) participantProviderDetails).getMeetingId();
-            String attendeeId = ((ChimeVideoChatParticipantProviderDetails) participantProviderDetails).getAttendeeId();
-            AmazonChime chimeClient = getChimeApiClient(account);
-            DeleteAttendeeRequest attendeeRequest = new DeleteAttendeeRequest();
-            attendeeRequest.setMeetingId(meetingId);
-            attendeeRequest.setAttendeeId(attendeeId);
-            DeleteAttendeeResult deleteAttendeeResult = chimeClient.deleteAttendee(attendeeRequest);
-            return deleteAttendeeResult.getSdkHttpMetadata().getHttpStatusCode() == 204;
-        } catch (NotFoundException e) {
-            //Do Nothing
-            return false;
-        }
+    public Mono<Boolean> removeParticipantFromConversation(Account account, VideoChatParticipantProviderDetails participantProviderDetails) {
+
+        return Mono.just(participantProviderDetails)
+                .filter(participantProviderDetailsMono -> participantProviderDetailsMono instanceof ChimeVideoChatParticipantProviderDetails)
+                .switchIfEmpty(Mono.error(new RuntimeException("Invalid conversation provider details")))
+                .flatMap(participantProviderDetailsMono -> {
+
+                    String meetingId = ((ChimeVideoChatParticipantProviderDetails) participantProviderDetailsMono).getMeetingId();
+                    String attendeeId = ((ChimeVideoChatParticipantProviderDetails) participantProviderDetailsMono).getAttendeeId();
+                    DeleteAttendeeRequest attendeeRequest = new DeleteAttendeeRequest();
+                    attendeeRequest.setMeetingId(meetingId);
+                    attendeeRequest.setAttendeeId(attendeeId);
+
+                    return Mono.fromCallable(() -> getChimeApiClient(account))
+                            .map(chimeClient -> chimeClient.deleteAttendee(attendeeRequest));
+                })
+                .map(deleteAttendeeResult -> {
+                    return deleteAttendeeResult.getSdkHttpMetadata().getHttpStatusCode()==204;
+                })
+                .onErrorResume(NotFoundException.class, e -> Mono.just(false));
+    }
+
+
+
+    @Override
+    public Mono<Boolean> deleteConversation(Account account, VideoChatConversationProviderDetails conversationProviderDetails) {
+
+        return Mono.just(conversationProviderDetails)
+                .filter(conversationProviderDetailsMono->conversationProviderDetailsMono instanceof ChimeVideoChatConversationProviderDetails)
+                .switchIfEmpty(Mono.error(new RuntimeException("Invalid conversation provider details")))
+                .flatMap(conversationProviderDetailsMono->{
+
+                    String meetingId = ((ChimeVideoChatConversationProviderDetails) conversationProviderDetailsMono).getMeetingId();
+                    DeleteMeetingRequest deleteMeetingRequest = new DeleteMeetingRequest();
+                    deleteMeetingRequest.setMeetingId(meetingId);
+
+                    return  Mono.fromCallable(()->getChimeApiClient(account))
+                            .map(chimeClient->chimeClient.deleteMeeting(deleteMeetingRequest));
+
+                })
+                .map(deleteMeetingResult ->deleteMeetingResult.getSdkHttpMetadata().getHttpStatusCode() == 204 )
+                .onErrorResume(NotFoundException.class, e -> Mono.just(false))
+                .onErrorResume(Exception.class,e->Mono.just(false));
+
+
     }
 
     @Override
-    public boolean deleteConversation(com.spr.videochatreactive.beans.Account account, VideoChatConversationProviderDetails conversationProviderDetails) {
-        if (!(conversationProviderDetails instanceof ChimeVideoChatConversationProviderDetails)) {
-            throw new RuntimeException("Invalid conversation provider details");
-        }
-        try {
-            String meetingId = ((ChimeVideoChatConversationProviderDetails) conversationProviderDetails).getMeetingId();
-            AmazonChime chimeClient = getChimeApiClient(account);
-            DeleteMeetingRequest deleteMeetingRequest = new DeleteMeetingRequest();
-            deleteMeetingRequest.setMeetingId(meetingId);
+    public Mono<Boolean> conversationEnded(Account account, VideoChatConversationProviderDetails conversationProviderDetails) {
 
-            DeleteMeetingResult deleteMeetingResult = chimeClient.deleteMeeting(deleteMeetingRequest);
+        return Mono.just(conversationProviderDetails)
+                .filter(conversationProviderDetailsMono-> conversationProviderDetailsMono  instanceof ChimeVideoChatConversationProviderDetails )
+                .switchIfEmpty(Mono.error(new RuntimeException("Invalid conversation provider details")))
+                .flatMap(conversationProviderDetailsMono->{
+                    Meeting meeting = ((ChimeVideoChatConversationProviderDetails) conversationProviderDetailsMono).getMeeting();
 
-            return deleteMeetingResult.getSdkHttpMetadata().getHttpStatusCode() == 204;
-        } catch (NotFoundException e) {
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+                    return Mono.fromCallable(()->getChimeApiClient(account))
+                            .map(apiClient-> apiClient.getMeeting(new GetMeetingRequest().withMeetingId(meeting.getMeetingId())));
+
+                })
+                .map(d-> false)
+                .onErrorResume(throwable -> {
+                    if (throwable instanceof NotFoundException) {
+                        return Mono.just(true);
+                    } else {
+                        return Mono.just(false);
+                    }
+                });
+    }
+
+    //Doubt about exception;
+    @Override
+    public Mono<VideoChatRecordingState> startRecording(Account account, VideoChatRecordingState recordingState,
+                                                        VideoChatConversation videoChatConversation) {
+
+        return createMediaPipeline(account, videoChatConversation, recordingState.getStartTime())
+                .map(pipelineResult -> {
+                    recordingState.setRecordingProviderTaskId(pipelineResult.getMediaCapturePipeline().getMediaPipelineId());
+                    return recordingState;
+                });
+
     }
 
     @Override
-    public boolean conversationEnded(com.spr.videochatreactive.beans.Account account, VideoChatConversationProviderDetails conversationProviderDetails) {
-        if (!(conversationProviderDetails instanceof ChimeVideoChatConversationProviderDetails)) {
-            throw new RuntimeException("Invalid conversation provider details");
-        }
-        try {
-            Meeting meeting = ((ChimeVideoChatConversationProviderDetails) conversationProviderDetails).getMeeting();
-            AmazonChime apiClient = getChimeApiClient(account);
-            apiClient.getMeeting(new GetMeetingRequest().withMeetingId(meeting.getMeetingId()));
-            return false;
-        } catch (NotFoundException e) {
-            return true;
-        } catch (Exception e) {
-        }
-        return false;
+    public Mono<Void> endRecording(Account account, VideoChatRecordingState recordingState) {
+        return deleteMediaCapturePipeline(account, recordingState.getRecordingProviderTaskId());
     }
 
     @Override
-    public VideoChatRecordingState startRecording(com.spr.videochatreactive.beans.Account account, VideoChatRecordingState recordingState,
-                                                  VideoChatConversation videoChatConversation) {
-        CreateMediaCapturePipelineResult pipelineResult = createMediaPipeline(account, videoChatConversation, recordingState.getStartTime());
-        recordingState.setRecordingProviderTaskId(pipelineResult.getMediaCapturePipeline().getMediaPipelineId());
-        return recordingState;
-    }
+    public Mono<String> startMediaPipelineForTranscription(Account account, VideoChatConversation videoChatConversation, Long startTime) {
 
-    @Override
-    public void endRecording(com.spr.videochatreactive.beans.Account account, VideoChatRecordingState recordingState) {
-        deleteMediaCapturePipeline(account, recordingState.getRecordingProviderTaskId());
-    }
-
-    @Override
-    public String startMediaPipelineForTranscription(com.spr.videochatreactive.beans.Account account, VideoChatConversation videoChatConversation, Long startTime) {
-        return createMediaPipeline(account, videoChatConversation, startTime).getMediaCapturePipeline().getMediaPipelineId();
+        return createMediaPipeline(account, videoChatConversation, startTime)
+                .map(CreateMediaCapturePipelineResult::getMediaCapturePipeline)
+                .map(MediaCapturePipeline::getMediaPipelineId);
     }
 
     // Method to hit Amazon Chime API for starting transcription
     @Override
-    public boolean startTranscription(com.spr.videochatreactive.beans.Account account, VideoChatConversation videoChatConversation) {
+    public Mono<Boolean> startTranscription(Account account, VideoChatConversation videoChatConversation) {
 
-        AmazonChime chimeClient = getChimeApiClient(account);
+        return Mono.fromCallable(()->getChimeApiClient(account))
+                .map(chimeClient->{
 
-        ChimeVideoChatConversationProviderDetails providerDetails = videoChatConversation.providerDetails();
+                    ChimeVideoChatConversationProviderDetails providerDetails = videoChatConversation.providerDetails();
+                    StartMeetingTranscriptionRequest startMeetingTranscriptionRequest = new StartMeetingTranscriptionRequest();
+                    startMeetingTranscriptionRequest.withMeetingId(providerDetails.getMeetingId());
+                    EngineTranscribeSettings engineTranscribeSettings = new EngineTranscribeSettings();
+                    Map<String, String> propertiesMap = account.getPropertiesMap();
+
+                    if (propertiesMap.containsKey(AWS_REGION)) {
+                        engineTranscribeSettings.withRegion(propertiesMap.get(AWS_REGION));
+                    }
+                    engineTranscribeSettings.withLanguageCode(fetchTranscriptionLanguageFromLocale(videoChatConversation.getId()));
+
+                    TranscriptionConfiguration transcriptionConfiguration = new TranscriptionConfiguration().withEngineTranscribeSettings(engineTranscribeSettings);
+                    startMeetingTranscriptionRequest.withTranscriptionConfiguration(transcriptionConfiguration);
+
+                    return chimeClient.startMeetingTranscription(startMeetingTranscriptionRequest);
+                })
+                .map(startMeetingTranscriptionResult ->{
+
+                    if (startMeetingTranscriptionResult.getSdkHttpMetadata().getHttpStatusCode() != 200)
+                        return (false);
+                    else
+                        return (true);
+
+                });
+
 
         /*
             The structure of the request is as follows:
@@ -185,35 +258,15 @@ public class ChimeVideoChatProvider implements VideoChatProvider {
                         [Vocab Filters etc also exist, we aren't using these for now]
                     [engineTranscribeMedicalSettings - we aren't using this]
          */
-        StartMeetingTranscriptionRequest startMeetingTranscriptionRequest = new StartMeetingTranscriptionRequest();
-        startMeetingTranscriptionRequest.withMeetingId(providerDetails.getMeetingId());
 
-        EngineTranscribeSettings engineTranscribeSettings = new EngineTranscribeSettings();
-        Map<String, String> propertiesMap = account.getPropertiesMap();
-        if (propertiesMap.containsKey(AWS_REGION)) {
-            engineTranscribeSettings.withRegion(propertiesMap.get(AWS_REGION));
-        }
-        engineTranscribeSettings.withLanguageCode(fetchTranscriptionLanguageFromLocale(videoChatConversation.getId()));
-        TranscriptionConfiguration transcriptionConfiguration =
-                new TranscriptionConfiguration().withEngineTranscribeSettings(engineTranscribeSettings);
-        startMeetingTranscriptionRequest.withTranscriptionConfiguration(transcriptionConfiguration);
-
-        StartMeetingTranscriptionResult startMeetingTranscriptionResult = chimeClient.startMeetingTranscription(startMeetingTranscriptionRequest);
-        if (startMeetingTranscriptionResult.getSdkHttpMetadata().getHttpStatusCode() != 200) {
-            return false;
-        }
-
-        return true;
     }
 
     //--------------------------------------------------------------- Private Methods ----------------------------------------------------------------
 
-    private CreateMediaCapturePipelineResult createMediaPipeline(com.spr.videochatreactive.beans.Account account, VideoChatConversation videoChatConversation, Long startTime) {
+    private Mono<CreateMediaCapturePipelineResult>createMediaPipeline(com.spr.videochatreactive.beans.Account account, VideoChatConversation videoChatConversation, Long startTime) {
 
-        AmazonChime chimeClient = getChimeApiClient(account);
-
+//        AmazonChime chimeClient = getChimeApiClient(account);
         ChimeVideoChatConversationProviderDetails providerDetails = videoChatConversation.providerDetails();
-
         CreateMediaCapturePipelineRequest createMediaCapturePipelineRequest = new CreateMediaCapturePipelineRequest();
         createMediaCapturePipelineRequest.withSourceType(MediaPipelineSourceType.ChimeSdkMeeting);
         createMediaCapturePipelineRequest
@@ -224,26 +277,32 @@ public class ChimeVideoChatProvider implements VideoChatProvider {
         String recordingArtifactsBucket = account.getPropertiesMap().get(RECORDING_ARTIFACTS_BUCKET);
         createMediaCapturePipelineRequest.withSinkArn("arn:aws:s3:::" + recordingArtifactsBucket + "/" + recordingArtifactsFolder);
 
-        return chimeClient.createMediaCapturePipeline(createMediaCapturePipelineRequest);
+        return Mono.fromCallable(()->getChimeApiClient(account))
+                .map(chimeClient->chimeClient.createMediaCapturePipeline(createMediaCapturePipelineRequest));
+//        return Mono.fromCallable(()-> chimeClient.createMediaCapturePipeline(createMediaCapturePipelineRequest));
+
     }
 
 
-    private void deleteMediaCapturePipeline(com.spr.videochatreactive.beans.Account account, String recordingProviderTaskId) {
+    private Mono<Void> deleteMediaCapturePipeline(com.spr.videochatreactive.beans.Account account, String recordingProviderTaskId) {
 
-        AmazonChime chimeClient = getChimeApiClient(account);
+//
+        return Mono.fromCallable(()->getChimeApiClient(account))
+                .map(chimeClient->chimeClient.deleteMediaCapturePipeline(new DeleteMediaCapturePipelineRequest().withMediaPipelineId(recordingProviderTaskId)))
+                .onErrorResume(Exception.class,e->Mono.error(e))
+                .then();
 
-        try {
-            chimeClient.deleteMediaCapturePipeline(new DeleteMediaCapturePipelineRequest().withMediaPipelineId(recordingProviderTaskId));
-        } catch (NotFoundException ne) {
-        } catch (Exception e) {
-            throw e;
-        }
     }
 
 
-    private AmazonChime getChimeApiClient(com.spr.videochatreactive.beans.Account account) {
+    private  AmazonChime getChimeApiClient(com.spr.videochatreactive.beans.Account account) {
+
+
         AWSCredentialsProvider credentialsProvider = getAwsCredentialsProvider(account);
         AmazonChimeClientBuilder builder = AmazonChimeClient.builder();
+        builder.setCredentials(credentialsProvider);
+
+
         builder.setCredentials(credentialsProvider);
         if (isNotEmpty(account.getPropertiesMap()) && account.getPropertiesMap().containsKey(AWS_REGION)) {
             builder.setRegion(account.getPropertiesMap().get(AWS_REGION));
@@ -251,9 +310,13 @@ public class ChimeVideoChatProvider implements VideoChatProvider {
         return builder.build();
     }
 
+
+
     private AWSCredentialsProvider getAwsCredentialsProvider(com.spr.videochatreactive.beans.Account account) {
         AWSCredentialsProvider credentialsProvider = new AWSStaticCredentialsProvider(new BasicAWSCredentials(account.getAccessToken(), account.getAccessSecret()));
         return credentialsProvider;
+
+
     }
 
     protected String getChimeArn(Account account) {
