@@ -2,31 +2,32 @@ package com.spr.videochatreactive;
 
 
 import com.spr.videochatreactive.beans.*;
+import reactor.core.publisher.Mono;
 
 public interface VideoChatProvider {
 
-    VideoChatConversationProviderDetails createVideoChatConversation(Account account);
+    Mono<VideoChatConversationProviderDetails> createVideoChatConversation(Account account);
 
     VideoChatParticipantProviderDetails getDummyParticipantProviderDetails();
 
-    VideoChatParticipantProviderDetails addVideoChatParticipant(Account account, VideoChatConversationProviderDetails conversationProviderDetails,
-                                                                String participantId);
+    Mono<VideoChatParticipantProviderDetails> addVideoChatParticipant(Account account, VideoChatConversationProviderDetails conversationProviderDetails,
+                                                                      String participantId);
 
-    VideoChatParticipantProviderDetails rejoinVideoChatParticipant(Account account, VideoChatConversationProviderDetails conversationProviderDetails,
-                                                                   String participantId);
+    Mono<VideoChatParticipantProviderDetails> rejoinVideoChatParticipant(Account account, VideoChatConversationProviderDetails conversationProviderDetails,
+                                                                         String participantId);
 
-    boolean removeParticipantFromConversation(Account account, VideoChatParticipantProviderDetails participantProviderDetails);
+    Mono<Boolean> removeParticipantFromConversation(Account account, VideoChatParticipantProviderDetails participantProviderDetails);
 
-    boolean deleteConversation(Account account, VideoChatConversationProviderDetails conversationProviderDetails);
+    Mono<Boolean> deleteConversation(Account account, VideoChatConversationProviderDetails conversationProviderDetails);
 
-    boolean conversationEnded(Account account, VideoChatConversationProviderDetails videoChatConversationProviderDetails);
+    Mono<Boolean> conversationEnded(Account account, VideoChatConversationProviderDetails videoChatConversationProviderDetails);
 
-    VideoChatRecordingState startRecording(Account account, VideoChatRecordingState recordingState,
-                                           VideoChatConversation videoChatConversation);
+    Mono<VideoChatRecordingState> startRecording(Account account, VideoChatRecordingState recordingState,
+                                                 VideoChatConversation videoChatConversation);
 
-    void endRecording(Account account, VideoChatRecordingState recordingState);
+    Mono<Void> endRecording(Account account, VideoChatRecordingState recordingState);
 
-    String startMediaPipelineForTranscription(Account account, VideoChatConversation videoChatConversation, Long startTime);
+    Mono<String> startMediaPipelineForTranscription(Account account, VideoChatConversation videoChatConversation, Long startTime);
 
-    boolean startTranscription(Account account, VideoChatConversation videoChatConversation);
+    Mono<Boolean> startTranscription(Account account, VideoChatConversation videoChatConversation);
 }
